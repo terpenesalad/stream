@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Stream Player</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #fff; --text: #1a1a2e; --muted: #6b7280;
+    --primary: #2563eb; --primary-hover: #1d4ed8;
+    --danger: #dc2626; --dl: #fef2f2; --db: #fecaca;
+    --success: #16a34a; --sl: #f0fdf4; --sb: #bbf7d0;
+    --info: #1d4ed8; --il: #eff6ff; --ib: #bfdbfe;
+    --border: #e5e7eb; --ibg: #fff;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+    --r: 12px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--muted:#94a3b8;
+      --primary:#3b82f6;--primary-hover:#60a5fa;
+      --danger:#f87171;--dl:#331111;--db:#5c1e1e;
+      --success:#4ade80;--sl:#0c2d1a;--sb:#14532d;
+      --info:#93bbfd;--il:#172040;--ib:#263d66;
+      --border:#334155;--ibg:#0f172a;
+      --shadow:0 1px 3px rgba(0,0,0,0.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f172a;--card:#1e293b;--text:#e2e8f0;--muted:#94a3b8;
+    --primary:#3b82f6;--primary-hover:#60a5fa;
+    --danger:#f87171;--dl:#331111;--db:#5c1e1e;
+    --success:#4ade80;--sl:#0c2d1a;--sb:#14532d;
+    --info:#93bbfd;--il:#172040;--ib:#263d66;
+    --border:#334155;--ibg:#0f172a;
+    --shadow:0 1px 3px rgba(0,0,0,0.3);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;padding:20px 16px 60px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+  .wrap{max-width:820px;margin:0 auto}
+  .hdr{text-align:center;margin-bottom:24px}
+  .hdr h1{font-size:26px;font-weight:700;letter-spacing:-0.4px}
+  .hdr p{color:var(--muted);font-size:15px;margin-top:4px}
+  .card{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .card-t{font-size:16px;font-weight:600;margin-bottom:14px}
+  input[type=url],input[type=text]{width:100%;font-size:16px;padding:12px 14px;border:2px solid var(--border);border-radius:10px;background:var(--ibg);color:var(--text);font-family:inherit;outline:none;transition:border-color .15s}
+  input:focus{border-color:var(--primary)}
+  input::placeholder{color:var(--muted);opacity:.6}
+  .ref-input{font-size:14px;padding:10px 14px;margin-top:10px}
+  .ref-label{font-size:13px;color:var(--muted);margin-top:14px;display:block}
+  .br{display:flex;gap:8px;margin-top:10px}
+  button{font-family:inherit;font-weight:600;border:none;border-radius:10px;padding:12px 20px;cursor:pointer;font-size:15px;transition:background .15s,transform .08s;touch-action:manipulation;-webkit-user-select:none;user-select:none;white-space:nowrap}
+  button:active{transform:scale(.97)}
+  .bp{background:var(--primary);color:#fff;flex:1}.bp:hover{background:var(--primary-hover)}
+  .bpaste{background:var(--card);border:2px solid var(--border);color:var(--text);display:none}
+  .bg{background:var(--success);color:#fff;flex:1}.bg:hover{opacity:.9}
+  .bo{background:transparent;border:2px solid var(--border);color:var(--text);flex:1}.bo:hover{background:var(--ibg)}
+  .bs{padding:10px 16px;font-size:14px;flex:0}
+  .cs{margin-top:14px;display:none;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+  .cs.v{display:block}
+  .cs-s{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:14px;border-bottom:1px solid var(--border);color:var(--muted)}
+  .cs-s:last-child{border-bottom:none}
+  .cs-s .i{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+  .cs-s.w .i{background:var(--border)}
+  .cs-s.t .i{background:var(--il);color:var(--info);border:2px solid var(--ib)}
+  .cs-s.t{color:var(--text);font-weight:500}
+  .cs-s.ok .i{background:var(--sl);color:var(--success)}
+  .cs-s.ok{color:var(--success);font-weight:600}
+  .cs-s.f .i{background:var(--dl);color:var(--danger)}
+  .cs-s.f{color:var(--muted);text-decoration:line-through;opacity:.6}
+  .cs-s .l{flex:1}.cs-s .d{font-size:12px;color:var(--muted);font-weight:400}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .spin{width:14px;height:14px;border:2px solid var(--ib);border-top-color:var(--info);border-radius:50%;animation:sp .7s linear infinite}
+  .sb{margin-top:12px;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:500;display:none;line-height:1.45}
+  .sb.e{display:block;background:var(--dl);color:var(--danger);border:1px solid var(--db)}
+  .sb.l{display:block;background:var(--il);color:var(--info);border:1px solid var(--ib)}
+  .sb.s{display:block;background:var(--sl);color:var(--success);border:1px solid var(--sb)}
+  .pc{background:#000;border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px;display:none}
+  .pc.v{display:block}
+  video{width:100%;display:block;max-height:75vh}
+  .pctrl{background:var(--card);padding:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .vw{display:flex;align-items:center;gap:8px;margin-left:auto}
+  .vw label{font-size:13px;color:var(--muted)}
+  .vs{-webkit-appearance:none;appearance:none;width:100px;height:6px;border-radius:3px;background:var(--border);outline:none}
+  .vs::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--primary);cursor:pointer}
+  .vs::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--primary);cursor:pointer;border:none}
+  .ll{list-style:none}
+  .li{display:flex;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--border)}
+  .li:last-child{border-bottom:none}
+  .lu{flex:1;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .blp{background:var(--primary);color:#fff;font-size:13px;padding:8px 14px;border-radius:8px;flex-shrink:0}
+  .bld{background:none;color:var(--danger);font-size:15px;padding:8px 10px;border-radius:8px;flex-shrink:0}
+  .em{color:var(--muted);font-size:14px}
+  .hp p{color:var(--muted);font-size:14px;margin-bottom:6px;line-height:1.55}
+  .hp p:last-child{margin-bottom:0}
+  @media(max-width:600px){
+    body{padding:14px 10px 40px}
+    .hdr h1{font-size:22px}
+    .br{flex-direction:column}
+    .bpaste{display:block}
+    .pctrl{flex-direction:column;gap:6px}
+    .pctrl button{width:100%;padding:14px}
+    .vw{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <h1>📺 Stream Player</h1>
+    <p>Paste a stream link and press Play</p>
+  </div>
+  <div class="card">
+    <input type="url" id="ui" placeholder="Paste stream link here" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" inputmode="url">
+    <label class="ref-label">Website where the stream plays (only needed if stream won't load without it)</label>
+    <input type="url" class="ref-input" id="ri" placeholder="e.g. http://www.fawanews.sc/" autocomplete="off" spellcheck="false" autocapitalize="off">
+    <div class="br">
+      <button class="bpaste" onclick="doPaste()">📋 Paste</button>
+      <button class="bp" onclick="play()">▶&ensp;Play</button>
+    </div>
+    <div class="cs" id="cs"></div>
+    <div class="sb" id="sb"></div>
+  </div>
+  <div class="pc" id="pc">
+    <video id="v" controls playsinline webkit-playsinline></video>
+    <div class="pctrl">
+      <button class="bg" onclick="doRefresh()">🔄 Refresh</button>
+      <button class="bo" onclick="tryNew()">📋 New Link</button>
+      <button class="bo bs" onclick="fs()">⛶</button>
+      <div class="vw"><label>Vol</label><input type="range" class="vs" min="0" max="100" value="100" oninput="v.volume=this.value/100"></div>
+    </div>
+  </div>
+  <div class="card"><div class="card-t">Saved links</div><ul class="ll" id="ll"></ul></div>
+  <div class="card hp">
+    <div class="card-t">Quick help</div>
+    <p><strong>To watch:</strong> Paste the stream link and press Play.</p>
+    <p><strong>403 error?</strong> Fill in the website field with the address of the site where the stream normally plays.</p>
+    <p><strong>Not loading?</strong> Press Refresh. If that doesn't work, the link may have expired.</p>
+    <p><strong>On phone?</strong> Use volume buttons. Rotate sideways for bigger picture.</p>
+  </div>
+</div>
+<script>
+const v=document.getElementById('v'),ui=document.getElementById('ui'),ri=document.getElementById('ri'),
+sb=document.getElementById('sb'),pc=document.getElementById('pc'),cs=document.getElementById('cs');
+let hl=null,cu='';
+
+// ===== PROXY: uses /api/proxy on same domain (Vercel) =====
+function px(target,ref){
+  let u='/api/proxy?url='+encodeURIComponent(target);
+  if(ref)u+='&referer='+encodeURIComponent(ref);
+  return u;
+}
+
+// ===== URL PARAMS: auto-play =====
+// ?url=STREAM&ref=WEBSITE
+window.addEventListener('DOMContentLoaded',()=>{
+  const p=new URLSearchParams(location.search);
+  if(p.get('url'))ui.value=p.get('url');
+  if(p.get('ref'))ri.value=p.get('ref');
+  if(innerWidth>600&&!p.get('url'))ui.focus();
+  renderLinks();
+  if(!p.get('url')){try{const l=getLinks();if(l.length){ui.value=l[0].url;if(l[0].ref)ri.value=l[0].ref;}}catch{}}
+  if(p.get('url'))setTimeout(play,300);
+});
+
+// ===== STEPS UI =====
+function resetS(){cs.innerHTML='';cs.classList.remove('v')}
+function addS(n){cs.classList.add('v');const d=document.createElement('div');d.className='cs-s w';d.innerHTML=`<div class="i">○</div><span class="l">${n}</span><span class="d"></span>`;cs.appendChild(d);return d}
+function sT(e){e.className='cs-s t';e.querySelector('.i').innerHTML='<div class="spin"></div>'}
+function sO(e,d){e.className='cs-s ok';e.querySelector('.i').textContent='✓';if(d)e.querySelector('.d').textContent=d}
+function sF(e,d){e.className='cs-s f';e.querySelector('.i').textContent='✗';if(d)e.querySelector('.d').textContent=d}
+
+// ===== PROBE =====
+async function probe(url){
+  const ref=ri.value.trim();
+  const step=addS('Proxy');
+  sT(step);
+  try{
+    const ac=new AbortController();const t=setTimeout(()=>ac.abort(),12000);
+    const r=await fetch(px(url,ref),{signal:ac.signal});clearTimeout(t);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const txt=await r.text();
+    if(url.includes('.m3u8')&&!txt.includes('#EXT'))throw new Error('Invalid m3u8');
+    sO(step,'Connected');return true;
+  }catch(e){sF(step,e.name==='AbortError'?'Timeout':e.message);return false}
+}
+
+// ===== PLAY =====
+async function play(){
+  let url=ui.value.trim();
+  if(!url){st('Paste a stream link first.','e');return}
+  if(!/^https?:\/\//i.test(url)){url='http://'+url;ui.value=url}
+  ui.blur();ri.blur();
+  cu=url;resetS();hs();destroy();
+  pc.classList.add('v');
+  setTimeout(()=>pc.scrollIntoView({behavior:'smooth',block:'start'}),200);
+  saveLink(url,ri.value.trim());
+
+  st('Connecting to stream…','l');
+  const ok=await probe(url);
+  if(!ok){st('Could not reach the stream. Check the link and website referer field.','e');return}
+  hs();
+  const ref=ri.value.trim();
+  const mkUrl=u=>px(u,ref);
+  if(url.includes('.m3u8'))startHLS(url,mkUrl);else startDirect(url,mkUrl);
+}
+
+function startHLS(url,mk){
+  if(!Hls.isSupported()){
+    if(v.canPlayType('application/vnd.apple.mpegurl')){
+      v.src=mk(url);
+      v.addEventListener('loadedmetadata',()=>{st('Stream connected — enjoy!','s');v.play().catch(()=>st('Tap play on the video.','s'));setTimeout(hs,3000)},{once:true});
+      v.addEventListener('error',()=>st('Could not play. Try Refresh.','e'),{once:true});return;
+    }
+    st('Browser can\'t play HLS. Try Chrome or Safari.','e');return;
+  }
+  const cfg={enableWorker:true,lowLatencyMode:true,maxBufferLength:30,maxMaxBufferLength:120,
+    manifestLoadPolicy:{default:{maxTimeToFirstByteMs:15000,maxLoadTimeMs:30000,timeoutRetry:{maxNumRetry:4,retryDelayMs:1000,maxRetryDelayMs:8000},errorRetry:{maxNumRetry:4,retryDelayMs:1000,maxRetryDelayMs:8000}}},
+    fragLoadPolicy:{default:{maxTimeToFirstByteMs:15000,maxLoadTimeMs:60000,timeoutRetry:{maxNumRetry:6,retryDelayMs:1000,maxRetryDelayMs:8000},errorRetry:{maxNumRetry:6,retryDelayMs:1000,maxRetryDelayMs:8000}}},
+    xhrSetup:(xhr,reqUrl)=>xhr.open('GET',mk(reqUrl),true)
+  };
+  hl=new Hls(cfg);hl.loadSource(url);hl.attachMedia(v);
+  let conn=false;
+  hl.on(Hls.Events.MANIFEST_PARSED,()=>{conn=true;st('Stream connected — enjoy!','s');v.play().catch(()=>st('Tap the play button.','s'));setTimeout(hs,3000)});
+  hl.on(Hls.Events.FRAG_LOADED,hs);
+  hl.on(Hls.Events.ERROR,(_,d)=>{if(!d.fatal)return;if(d.type===Hls.ErrorTypes.MEDIA_ERROR)hl.recoverMediaError();else if(conn)st('Connection lost — press Refresh.','e');else st('Could not start. Press Refresh or try new link.','e')});
+}
+
+function startDirect(url,mk){
+  v.src=mk(url);
+  v.addEventListener('loadeddata',()=>{st('Video loaded — enjoy!','s');v.play().catch(()=>{});setTimeout(hs,3000)},{once:true});
+  v.addEventListener('error',()=>st('Could not play this file.','e'),{once:true});
+}
+
+function doRefresh(){if(cu){destroy();play()}}
+function tryNew(){destroy();pc.classList.remove('v');ui.value='';ri.value='';hs();resetS();scrollTo({top:0,behavior:'smooth'})}
+function fs(){if(v.requestFullscreen)v.requestFullscreen();else if(v.webkitEnterFullscreen)v.webkitEnterFullscreen();else if(v.webkitRequestFullscreen)v.webkitRequestFullscreen()}
+function destroy(){if(hl){hl.destroy();hl=null}v.removeAttribute('src');v.load()}
+function st(m,t){sb.textContent=m;sb.className='sb '+t}
+function hs(){sb.className='sb'}
+
+async function doPaste(){try{const t=await navigator.clipboard.readText();if(t){ui.value=t.trim();st('Pasted!','s');setTimeout(hs,1200)}}catch{ui.focus();st('Tap and hold, then tap Paste.','l')}}
+
+ui.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ui.blur();play()}});
+ri.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();ri.blur();play()}});
+
+// ===== SAVED LINKS =====
+function getLinks(){try{return JSON.parse(localStorage.getItem('sl3')||'[]')}catch{return[]}}
+function saveLink(u,r){try{let l=getLinks().filter(x=>x.url!==u);l.unshift({url:u,ref:r||''});localStorage.setItem('sl3',JSON.stringify(l.slice(0,12)));renderLinks()}catch{}}
+function delLink(u){try{localStorage.setItem('sl3',JSON.stringify(getLinks().filter(x=>x.url!==u)));renderLinks()}catch{}}
+function playLink(u,r){ui.value=u;ri.value=r||'';play()}
+function renderLinks(){
+  const el=document.getElementById('ll'),links=getLinks();
+  if(!links.length){el.innerHTML='<li class="em">Links you play will be saved here.</li>';return}
+  el.innerHTML=links.map(({url,ref})=>{
+    const s=url.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    const ju=url.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const jr=(ref||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return`<li class="li"><span class="lu" title="${s}">${s}</span><button class="blp" onclick="playLink('${ju}','${jr}')">Play</button><button class="bld" onclick="delLink('${ju}')">✕</button></li>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
